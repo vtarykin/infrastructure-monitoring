@@ -1,0 +1,32 @@
+zabbix_export:
+  version: '7.4'
+  host_groups:
+    - uuid: dc579cd7a1a34222933f24f52a68bcd8
+      name: 'Linux servers'
+  hosts:
+    - host: monitoring-host
+      name: monitoring-host
+      templates:
+        - name: 'ICMP Ping'
+        - name: 'Linux by Zabbix agent active'
+      groups:
+        - name: 'Linux servers'
+      httptests:
+        - name: 'Zabbix frontend availability'
+          steps:
+            - name: 'Check Zabbix frontend'
+              url: 'http://zabbix-web:8080/'
+              follow_redirects: 'NO'
+              status_codes: '200'
+      macros:
+        - macro: '{$IFCONTROL:"ens37"}'
+          value: '0'
+        - macro: '{$VFS.FS.PUSED.MAX.WARN:"/"}'
+          value: '90'
+  triggers:
+    - expression: 'min(/monitoring-host/system.cpu.util,1m)>80'
+      name: 'High CPU utilization on {HOST.NAME}'
+      priority: WARNING
+    - expression: 'last(/monitoring-host/web.test.fail[Zabbix frontend availability])<>0'
+      name: 'Zabbix frontend is unavailable'
+      priority: HIGH
